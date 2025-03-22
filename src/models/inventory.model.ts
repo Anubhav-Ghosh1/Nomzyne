@@ -15,7 +15,6 @@ const inventorySchema = new mongoose.Schema<IInventory>(
     name: {
       type: String,
       required: true,
-      unique: true,
       lowercase: true,
       trim: true,
       index: true, // make search fast
