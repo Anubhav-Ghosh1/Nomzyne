@@ -112,4 +112,66 @@ const addEmployee = asyncHandler(async (req: StoreRequest, res: Response) => {
   }
 });
 
-export { createStore, addEmployee };
+const removeEmployee = asyncHandler(async (req: StoreRequest, res: Response) => {
+  try
+  {
+    const id = req.user._id;
+    const { storeId, employee } = req.body;
+    if (!id) {
+      throw new ApiError(404, "User not found");
+    }
+    const userDetails = await User.findById(id);
+    if (!userDetails) {
+      throw new ApiError(404, "User not found");
+    }
+
+    if (userDetails.role !== "admin") {
+      throw new ApiError(403, "You are not allowed to add an employee");
+    }
+
+    const store = await Store.findById(storeId);
+    if (!store) {
+      throw new ApiError(404, "Store not found");
+    }
+
+    if (store.owner !== id) {
+      throw new ApiError(403, "You are not allowed to add an employee");
+    }
+
+    for (let i = 0; i < employee.length; i++) {
+      const userDetails = await User.findById({ email: employee[i] });
+      if (!userDetails) {
+        throw new ApiError(404, "User not found");
+      }
+      const store = await Store.findByIdAndUpdate(
+        storeId,
+        {
+          $pull: { employees: userDetails._id },
+        },
+        { new: true }
+      );
+
+      const updateUser = await User.findByIdAndUpdate(
+        userDetails._id,
+        {
+          $unset: { store: "" },
+        },
+        { new: true }
+      );
+    }
+
+    return res
+      .status(201)
+      .json(new ApiResponse(201, store, "Employee removed successfully"));
+  }
+  catch(e)
+  {
+    if (e instanceof ApiError) {
+      return res
+        .status(e.statusCode)
+        .json(new ApiResponse(e.statusCode, e.message));
+    }
+  }
+});
+
+export { createStore, addEmployee, removeEmployee };
