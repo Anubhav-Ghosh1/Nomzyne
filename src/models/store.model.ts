@@ -6,8 +6,8 @@ interface IStore extends Document {
   name: string;
   email: string;
   password: string;
+  owner: mongoose.Types.ObjectId;
   productVersion: "free" | "paid";
-  role?: "user" | "admin";
   employee: mongoose.Types.ObjectId[];
 }
 
@@ -28,16 +28,16 @@ const storeSchema = new mongoose.Schema<IStore>(
       lowercase: true,
       trim: true,
     },
+    owner: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
     employee: [{
-      type: mongoose.Types.ObjectId,
+      type: mongoose.Schema.Types.ObjectId,
       ref: "Store",
-    }],
-    role: {
-      type: String,
-      enum: ["user", "admin"],
-    }
+    }]
   },
   { timestamps: true }
 );
 
-export const User = mongoose.model<IStore>("Store", storeSchema);
+export default mongoose.model<IStore>("Store", storeSchema);
