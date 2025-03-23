@@ -180,10 +180,66 @@ const getProductById = asyncHandler(
   }
 );
 
+const searchProduct = asyncHandler(
+  async (req: InventoryRequest, res: Response) => {
+    try {
+      const { storeId, search, page = 0, limit = 20 } = req.body;
+      const userId = req.user._id;
+
+      if (!storeId || !search) {
+        return res
+          .status(400)
+          .json(new ApiResponse(400, "storeId and search query are required"));
+      }
+
+      const userDetails = await User.findById(userId);
+      if (!userDetails) {
+        throw new ApiError(404, "User not found");
+      }
+      if (userDetails.store !== storeId) {
+        throw new ApiError(
+          403,
+          "You are not allowed to view products of this store"
+        );
+      }
+
+      // Sanitize and use prefix regex
+      const sanitizedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const regex = new RegExp("^" + sanitizedSearch, "i");
+
+      const query = {
+        storeId,
+        userId,
+        barcode: regex,
+      };
+
+      const products = await Inventory.find(query)
+        .limit(limit)
+        .skip(page * limit)
+        .lean();
+
+      return res
+        .status(200)
+        .json(new ApiResponse(200, products, "Products fetched successfully"));
+    } catch (e) {
+      if (e instanceof ApiError) {
+        return res
+          .status(e.statusCode)
+          .json(new ApiResponse(e.statusCode, e.message));
+      } else {
+        return res
+          .status(500)
+          .json(new ApiResponse(500, "Internal Server Error"));
+      }
+    }
+  }
+);
+
 export {
   addProduct,
   updateProduct,
   deleteProduct,
   getAllProducts,
   getProductById,
+  searchProduct,
 };
