@@ -8,6 +8,8 @@ interface ISale extends Document {
   barcode: string;
   quantity: number;
   products: mongoose.Types.ObjectId[];
+  totalSale: number;
+  saleMedium: string;
   store: mongoose.Types.ObjectId;
   employee: mongoose.Types.ObjectId;
 }
@@ -28,6 +30,16 @@ const saleSchema = new mongoose.Schema<ISale>(
       lowercase: true,
       index: true,
       trim: true,
+    },
+    totalSale: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
+    saleMedium: {
+      type: String,
+      enum: ["Online","Cash","Card"],
+      default: "Cash",
     },
     products: [
       {

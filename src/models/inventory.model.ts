@@ -2,11 +2,12 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 dotenv.config();
 
-interface IInventory extends Document {
+export interface IInventory extends Document {
   name: string;
   barcode: string;
   password: string;
   quantity: number;
+  price: number;
   store: mongoose.Types.ObjectId;
 }
 

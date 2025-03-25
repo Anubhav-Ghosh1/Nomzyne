@@ -14,6 +14,7 @@ interface SaleRequest extends Request {
   user: mongoose.Types.ObjectId;
   products: mongoose.Types.ObjectId[];
   quantity: number;
+  saleMedium: string;
   name?: string | "Temp User";
   employees: mongoose.Types.ObjectId;
   role?: string;
@@ -22,7 +23,7 @@ interface SaleRequest extends Request {
 const createBill = asyncHandler(async (req: SaleRequest, res: Response) => {
   try {
     // Barcode will be array of products
-    const { barcodes, storeId, phone, quantity, name } = req.body;
+    const { barcodes, storeId, phone, quantity, saleMedium, name } = req.body;
     const id = req.user._id;
     const userDetails = await User.findById(id);
     if (!userDetails) {
@@ -41,8 +42,11 @@ const createBill = asyncHandler(async (req: SaleRequest, res: Response) => {
       phone,
       quantity,
       store: storeId,
+      saleMedium: saleMedium,
       employee: id,
     });
+
+    let total_sale = 0;
 
     barcodes.forEach(async (barcode: string) => {
       const product = await Inventory.findOne({ barcode });
@@ -53,6 +57,7 @@ const createBill = asyncHandler(async (req: SaleRequest, res: Response) => {
         throw new ApiError(400, "Product out of stock");
       }
       product.quantity -= quantity;
+      total_sale += product.price * quantity;
       await product.save();
       const updateSale = await Sale.findByIdAndUpdate(
         sale._id,
@@ -64,6 +69,11 @@ const createBill = asyncHandler(async (req: SaleRequest, res: Response) => {
         { new: true }
       );
     });
+    sale.totalSale = total_sale;
+    await sale.save();
+    return res
+      .status(201)
+      .json(new ApiResponse(201, sale, "Sale created successfully"));
   } catch (e) {
     if (e instanceof ApiError) {
       return res
@@ -165,4 +175,43 @@ const getSaleById = asyncHandler(async (req: SaleRequest, res: Response) => {
   }
 });
 
-export { createBill, allSalesForStore, allSalesForEmployee, getSaleById };
+const totalSaleBasedOnPaymentMethod = asyncHandler(
+  async (req: SaleRequest, res: Response) => {
+    try {
+      const { storeId } = req.body;
+      const id = req.user._id;
+      const userDetails = await User.findById(id);
+      if (!userDetails) {
+        throw new ApiError(404, "User not found");
+      }
+      if (userDetails.store !== storeId) {
+        throw new ApiError(
+          403,
+          "You are not allowed to view sales for this store"
+        );
+      }
+
+      const saleDetail = await Sale.aggregate([
+        { $match: { store: new mongoose.Types.ObjectId(storeId) } },
+        { $group: { _id: "$saleMedium", totalSale: { $sum: "$totalSale" } } },
+      ]);
+      return res
+        .status(200)
+        .json(
+          new ApiResponse(
+            200,
+            saleDetail,
+            "Total sales based on payment method fetched successfully"
+          )
+        );
+    } catch (e) {
+      if (e instanceof ApiError) {
+        return res
+          .status(e.statusCode)
+          .json(new ApiResponse(e.statusCode, e.message));
+      }
+    }
+  }
+);
+
+export { createBill, allSalesForStore, allSalesForEmployee, getSaleById, totalSaleBasedOnPaymentMethod };
