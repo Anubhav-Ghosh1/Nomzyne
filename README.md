@@ -65,7 +65,7 @@ We welcome contributions! Here's how you can help:
 4. Push to the branch: `git push origin feat/your-feature`.
 5. Open a Pull Request.
 
-Check out our [CONTRIBUTING.md](CONTRIBUTING.md) for more details.
+Check out our [CONTRIBUTING.md](https://github.com/Anubhav-Ghosh1/Nomzyne/blob/main/CONTRIBUTING.MD) for more details.
 
 ---
 
